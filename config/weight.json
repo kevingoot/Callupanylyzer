@@ -1,0 +1,12 @@
+{
+  "stat_performance": 0.15,
+  "prospect_pedigree": 0.20,
+  "team_market": 0.20,
+  "health_injury": 0.07,
+  "prior_experience": 0.03,
+  "age_upside": 0.07,
+  "position_premium": 0.08,
+  "level_reached": 0.04,
+  "defensive_impact": 0.02,
+  "position_specific_norm": 0.14
+}
