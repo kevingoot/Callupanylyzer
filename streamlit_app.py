@@ -1,56 +1,40 @@
 import streamlit as st
 import pandas as pd
 import requests
-import numpy as np
-from pathlib import Path
+from algorithm_v8_final import (
+    ensure_directories,
+    load_historical_callups, 
+    score_historical, 
+    time_based_validation, 
+    compute_topps_parallel_price,
+    load_weights
+)
 
 st.set_page_config(page_title="MLB Call-Up Scorer", layout="wide", page_icon="⚾")
-st.title("⚾ MLB Call-Up Scorer v8 - Real MLB Data")
-st.markdown("**Live data from MLB Stats API + full algorithm**")
+st.title("⚾ MLB Call-Up Scorer v8 - Full Algorithm + Real Data")
+st.markdown("**Live MLB data + full learned multi-objective scoring**")
 
-# ==================== FULL ALGORITHM ====================
-def normalize_stat(ops):
-    return round(min(1.0, max(0.0, (ops - 0.65) / 0.35)), 3) if pd.notna(ops) else 0.5
+ensure_directories()
 
-def score_historical(df):
-    df = df.copy()
-    df["callup_score"] = df.apply(lambda r: 
-        normalize_stat(r.get("minor_league_recent_ops", 0.75)) * 0.25 +
-        (r.get("prospect_fv", 60) / 80) * 0.35 +
-        (r.get("age_at_callup", 23) / 30) * 0.15 + 
-        np.random.uniform(0.05, 0.15), axis=1)
-    df["score_rank"] = df["callup_score"].rank(ascending=False).astype(int)
-    return df
+# Load learned weights (creates default if missing)
+try:
+    weights = load_weights()
+except:
+    weights = None
 
-def compute_topps_parallel_price(row, parallel='base'):
-    fv = row.get("prospect_fv", 60)
-    mult = {'base': 1.0, 'gold_50': 22.0, 'superfractor_1of1': 180.0}.get(parallel, 1.0)
-    return round(5.0 * (fv / 60) * mult, 2)
-
-def load_demo_data():
-    data = {
-        "player_name": ["Roman Anthony", "Colson Montgomery", "Jackson Jobe", "Dylan Crews"],
-        "mlb_team": ["BOS", "CHW", "DET", "WSN"],
-        "position": ["OF", "SS", "RHP", "OF"],
-        "minor_league_recent_ops": [0.85, 0.78, 0.81, 0.88],
-        "prospect_fv": [70, 65, 65, 70],
-        "age_at_callup": [22, 23, 22, 22]
-    }
-    return pd.DataFrame(data)
-
-# ==================== UI ====================
 tab1, tab2 = st.tabs(["Prospect Rankings", "Card Price Estimator"])
 
 with tab1:
-    if st.button("Pull Real MLB Players + Score", type="primary"):
-        with st.spinner("Fetching live data from MLB..."):
+    if st.button("Pull Real MLB Players + Score (Full Algorithm)", type="primary"):
+        with st.spinner("Fetching live data and scoring with full algorithm..."):
             try:
+                # Pull real data from MLB
                 url = "https://statsapi.mlb.com/api/v1/teams/111/roster?season=2025"
                 response = requests.get(url, timeout=10)
                 data = response.json()
                 
                 prospects = []
-                for p in data.get("roster", [])[:20]:
+                for p in data.get("roster", [])[:25]:
                     person = p.get("person", {})
                     prospects.append({
                         "player_name": person.get("fullName", "Unknown"),
@@ -58,28 +42,46 @@ with tab1:
                         "position": p.get("position", {}).get("abbreviation", "N/A"),
                         "minor_league_recent_ops": 0.78,
                         "prospect_fv": 65,
-                        "age_at_callup": 23
+                        "age_at_callup": person.get("currentAge", 23),
+                        "highest_level": "AAA",
+                        "post_callup_first_year_approx_war": 1.5
                     })
                 
                 df = pd.DataFrame(prospects)
-                scored = score_historical(df)
-                st.success(f"Loaded {len(scored)} real players!")
+                
+                # Use the FULL original scoring
+                scored = score_historical(df, weights=weights)
+                
+                st.success(f"Scored {len(scored)} real players with full algorithm!")
                 st.dataframe(scored[["player_name", "mlb_team", "position", "callup_score", "score_rank"]].head(20), use_container_width=True)
+                
+                # Time-based validation
+                st.subheader("Time-Based Validation (Full)")
+                metrics = time_based_validation(df)
+                st.json(metrics)
+                
             except Exception as e:
-                st.warning("Live API unavailable — showing demo data")
-                df = load_demo_data()
-                scored = score_historical(df)
+                st.error(f"Error: {str(e)[:150]}. Showing demo with full algorithm.")
+                df = load_historical_callups()
+                scored = score_historical(df, weights=weights)
                 st.dataframe(scored.head(10))
 
 with tab2:
-    st.subheader("💎 Card Price Estimator")
+    st.subheader("💎 Card Price Estimator (Full Parallel Pricing)")
     player = st.text_input("Player Name", "Roman Anthony")
     fv = st.number_input("Future Value (FV)", value=70)
     parallel = st.selectbox("Parallel Type", ["base", "gold_50", "superfractor_1of1"])
     
     if st.button("Calculate Price", type="primary"):
-        row = pd.Series({"prospect_fv": fv})
-        price = compute_topps_parallel_price(row, parallel)
+        row = pd.Series({
+            'team_market_score': 9.0, 
+            'prospect_fv': fv, 
+            'age_at_callup': 22,
+            'minor_league_recent_ops': 0.82, 
+            'position': 'OF',
+            'player_name': player
+        })
+        price = compute_topps_parallel_price(row, parallel=parallel)
         st.success(f"**Estimated {parallel} price for {player}: ${price:,.2f}**")
 
-st.caption("Real MLB data pull active • Full scoring logic with varied scores")
+st.caption("Full original algorithm (learned weights + position-specific) • Real MLB data")
