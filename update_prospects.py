@@ -1,40 +1,40 @@
-#!/usr/bin/env python3
-"""Daily MLB + Weekly FanGraphs Top 100 Prospects Updater"""
 import pandas as pd
-import requests
 import os
 from datetime import datetime
 
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
+print("=== Prospects Updater ===")
 
-def scrape_fangraphs_top_100():
-    # Simplified real list (replace with scraper if needed)
-    return pd.read_csv("data/top_100_prospects_full_stats.csv")
-
-def pull_mlb_stats(df):
-    enriched = []
-    for _, row in df.iterrows():
-        enriched.append({
-            **row.to_dict(),
-            "mlb_ops": 0.78,
-            "mlb_hr": 5,
-            "pull_date": datetime.now().strftime("%Y-%m-%d")
-        })
-    return pd.DataFrame(enriched)
-
-def clean_old_data():
-    for f in os.listdir(DATA_DIR):
-        if f.endswith(".csv") and "top_100" in f:
-            os.remove(os.path.join(DATA_DIR, f))
-
-if __name__ == "__main__":
-    print("Updating prospects...")
-    clean_old_data()
+def find_or_create_base_csv():
+    possible_paths = [
+        "data/top_100_prospects_full_stats.csv",
+        "top_100_prospects_full_stats.csv",
+        "data/top_100_prospects_2025.csv"
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            print(f"Found base CSV at {path}")
+            return pd.read_csv(path)
     
-    prospects = scrape_fangraphs_top_100()
-    enriched = pull_mlb_stats(prospects)
-    
-    filename = f"{DATA_DIR}/top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv"
-    enriched.to_csv(filename, index=False)
-    print(f"✅ Saved {len(enriched)} prospects to {filename}")
+    print("No base CSV found — creating default")
+    data = {
+        "player_name": ["Roman Anthony", "Colson Montgomery", "Jackson Jobe"],
+        "mlb_team": ["BOS", "CHW", "DET"],
+        "position": ["OF", "SS", "RHP"],
+        "minor_league_recent_ops": [0.85, 0.78, 0.81],
+        "prospect_fv": [70, 65, 65],
+        "age_at_callup": [22, 23, 22],
+        "highest_level": ["AAA", "AAA", "AAA"]
+    }
+    df = pd.DataFrame(data)
+    os.makedirs("data", exist_ok=True)
+    df.to_csv("data/top_100_prospects_full_stats.csv", index=False)
+    return df
+
+df = find_or_create_base_csv()
+print(f"Loaded {len(df)} prospects")
+
+df["pull_date"] = datetime.now().strftime("%Y-%m-%d")
+
+filename = f"data/top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv"
+df.to_csv(filename, index=False)
+print(f"✅ Saved {filename}")
