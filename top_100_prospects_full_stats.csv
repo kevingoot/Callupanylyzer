@@ -1,0 +1,11 @@
+rank,player_name,mlb_team,position,prospect_fv,age_at_callup,highest_level,minor_league_recent_ops,pull_date
+1,Jesús Made,MIL,SS,60,19,AA,0.82,2026-06-23
+2,Leo De Vries,OAK,SS,60,19,AA,0.79,2026-06-23
+3,Colson Montgomery,CHW,SS,65,23,AAA,0.81,2026-06-23
+4,Roman Anthony,BOS,OF,70,22,AAA,0.85,2026-06-23
+5,Dylan Crews,WSN,OF,65,23,AAA,0.88,2026-06-23
+6,Jackson Jobe,DET,RHP,65,22,AAA,0.0,2026-06-23
+7,Roki Sasaki,LAD,RHP,65,23,MLB,0.0,2026-06-23
+8,Walker Jenkins,MIN,OF,65,21,AA,0.84,2026-06-23
+9,Travis Bazzana,CLE,2B,60,22,AA,0.80,2026-06-23
+10,Aidan Miller,PHI,SS,55,20,AA,0.77,2026-06-
