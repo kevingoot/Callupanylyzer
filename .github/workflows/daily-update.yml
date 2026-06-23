@@ -1,0 +1,23 @@
+name: Daily Prospects Update
+
+on:
+  schedule:
+    - cron: '0 6 * * *'        # Daily at 6 AM UTC
+  workflow_dispatch:           # Manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas requests
+      - run: python update_prospects.py
+      - run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/
+          git commit -m "Daily prospects update $(date +%Y-%m-%d)" || exit 0
+          git push
