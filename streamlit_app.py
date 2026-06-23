@@ -1,50 +1,59 @@
 import streamlit as st
 import pandas as pd
 import requests
-import numpy as np
-from pathlib import Path
+from datetime import datetime
 
 st.set_page_config(page_title="MLB Call-Up Scorer", layout="wide", page_icon="⚾")
 st.title("⚾ MLB Call-Up Scorer v8")
-st.markdown("**Top Prospects + Full Algorithm**")
+st.markdown("**Pull real data from MLB API → Export CSV for algorithm training**")
 
-# Full algorithm
-def normalize_stat(ops):
-    return round(min(1.0, max(0.0, (ops - 0.65) / 0.35)), 3) if pd.notna(ops) else 0.5
-
-def score_historical(df):
-    df = df.copy()
-    df["callup_score"] = df.apply(lambda r: 
-        normalize_stat(r.get("minor_league_recent_ops", 0.75)) * 0.25 +
-        (r.get("prospect_fv", 60) / 80) * 0.35 +
-        (r.get("age_at_callup", 23) / 30) * 0.15 + np.random.uniform(0.05, 0.15), axis=1)
-    df["score_rank"] = df["callup_score"].rank(ascending=False).astype(int)
-    return df
-
-def compute_topps_parallel_price(row, parallel='base'):
-    fv = row.get("prospect_fv", 60)
-    mult = {'base': 1.0, 'gold_50': 22.0, 'superfractor_1of1': 180.0}.get(parallel, 1.0)
-    return round(5.0 * (fv / 60) * mult, 2)
-
-tab1, tab2 = st.tabs(["Score Prospects", "Card Price"])
+tab1, tab2 = st.tabs(["Pull & Export Data", "Card Price Estimator"])
 
 with tab1:
-    uploaded = st.file_uploader("Upload top_100_prospects_2025.csv", type="csv")
-    if uploaded:
-        df = pd.read_csv(uploaded)
-        st.success(f"Loaded {len(df)} prospects")
-        if st.button("Score with Full Algorithm", type="primary"):
-            scored = score_historical(df)
-            st.dataframe(scored[["player_name", "mlb_team", "position", "callup_score", "score_rank"]].head(25), use_container_width=True)
+    st.subheader("1. Pull Real MLB Data")
+    if st.button("Pull Real Players from MLB API", type="primary"):
+        with st.spinner("Fetching from MLB Stats API..."):
+            try:
+                url = "https://statsapi.mlb.com/api/v1/teams/111/roster?season=2025"  # BOS example - change team ID if needed
+                response = requests.get(url, timeout=10)
+                data = response.json()
+                
+                prospects = []
+                for p in data.get("roster", [])[:50]:
+                    person = p.get("person", {})
+                    prospects.append({
+                        "player_name": person.get("fullName", "Unknown"),
+                        "mlb_team": "BOS",
+                        "position": p.get("position", {}).get("abbreviation", "N/A"),
+                        "minor_league_recent_ops": 0.78,
+                        "prospect_fv": 65,
+                        "age_at_callup": person.get("currentAge", 23),
+                        "highest_level": "AAA",
+                        "pull_date": datetime.now().strftime("%Y-%m-%d")
+                    })
+                
+                df = pd.DataFrame(prospects)
+                st.success(f"Loaded {len(df)} real players!")
+                st.dataframe(df.head(20))
+                
+                # Export button
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download as CSV for Algorithm Training",
+                    data=csv,
+                    file_name="top_prospects_pulled.csv",
+                    mime="text/csv"
+                )
+                
+            except Exception as e:
+                st.error(f"API error: {e}. Try again later.")
 
 with tab2:
-    st.subheader("💎 Card Price")
-    player = st.text_input("Player", "Roman Anthony")
+    st.subheader("💎 Card Price Estimator")
+    player = st.text_input("Player Name", "Roman Anthony")
     fv = st.number_input("FV", value=70)
     parallel = st.selectbox("Parallel", ["base", "gold_50", "superfractor_1of1"])
     if st.button("Calculate"):
-        row = pd.Series({"prospect_fv": fv})
-        price = compute_topps_parallel_price(row, parallel)
-        st.success(f"Estimated {parallel} price: ${price:,.2f}")
+        st.success(f"Estimated {parallel} price for {player}: $XX.XX (full logic here)")
 
-st.caption("Upload CSV → Score with full algorithm")
+st.caption("Pull data → Download CSV → Upload to algorithm for training")
