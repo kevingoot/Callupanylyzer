@@ -8,5 +8,4 @@ rank,player_name,mlb_team,position,prospect_fv,age_at_callup,highest_level,minor
 7,Roki Sasaki,LAD,RHP,65,23,MLB,0.0,2026-06-23
 8,Walker Jenkins,MIN,OF,65,21,AA,0.84,2026-06-23
 9,Travis Bazzana,CLE,2B,60,22,AA,0.80,2026-06-23
-10,Aidan Miller,PHI,SS,55,20,AA,0.77,2026-06-23
-... (full 100 rows available in your repo after upload)
+10,Aidan Miller,PHI,SS,55,20,AA,0.77,2026-0
