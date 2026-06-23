@@ -4,10 +4,9 @@ from datetime import datetime
 
 print("=== Prospects Updater ===")
 
-# Look for the base file
 base_file = "top_100_prospects_full_stats.csv"
 if not os.path.exists(base_file):
-    print("Base CSV not found — creating default")
+    print("Creating default base CSV")
     data = {
         "player_name": ["Roman Anthony", "Colson Montgomery", "Jackson Jobe"],
         "mlb_team": ["BOS", "CHW", "DET"],
@@ -23,5 +22,11 @@ df = pd.read_csv(base_file)
 print(f"Loaded {len(df)} prospects")
 
 df["pull_date"] = datetime.now().strftime("%Y-%m-%d")
-df.to_csv(f"top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv", index=False)
-print("✅ Update complete")
+
+new_file = f"top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv"
+df.to_csv(new_file, index=False)
+print(f"✅ Saved {new_file}")
+
+# Git commit (for Actions)
+os.system('git add *.csv')
+os.system('git commit -m "Daily prospects update" || echo "No changes"')
