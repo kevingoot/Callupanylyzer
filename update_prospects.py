@@ -1,40 +1,27 @@
-#!/usr/bin/env python3
-"""Daily MLB + Weekly FanGraphs Top 100 Prospects Updater"""
 import pandas as pd
-import requests
 import os
 from datetime import datetime
 
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
+print("=== Prospects Updater ===")
 
-def scrape_fangraphs_top_100():
-    # Simplified real list (replace with scraper if needed)
-    return pd.read_csv("data/top_100_prospects_full_stats.csv")
+# Look for the base file
+base_file = "top_100_prospects_full_stats.csv"
+if not os.path.exists(base_file):
+    print("Base CSV not found — creating default")
+    data = {
+        "player_name": ["Roman Anthony", "Colson Montgomery", "Jackson Jobe"],
+        "mlb_team": ["BOS", "CHW", "DET"],
+        "position": ["OF", "SS", "RHP"],
+        "minor_league_recent_ops": [0.85, 0.78, 0.81],
+        "prospect_fv": [70, 65, 65],
+        "age_at_callup": [22, 23, 22],
+        "highest_level": ["AAA", "AAA", "AAA"]
+    }
+    pd.DataFrame(data).to_csv(base_file, index=False)
 
-def pull_mlb_stats(df):
-    enriched = []
-    for _, row in df.iterrows():
-        enriched.append({
-            **row.to_dict(),
-            "mlb_ops": 0.78,
-            "mlb_hr": 5,
-            "pull_date": datetime.now().strftime("%Y-%m-%d")
-        })
-    return pd.DataFrame(enriched)
+df = pd.read_csv(base_file)
+print(f"Loaded {len(df)} prospects")
 
-def clean_old_data():
-    for f in os.listdir(DATA_DIR):
-        if f.endswith(".csv") and "top_100" in f:
-            os.remove(os.path.join(DATA_DIR, f))
-
-if __name__ == "__main__":
-    print("Updating prospects...")
-    clean_old_data()
-    
-    prospects = scrape_fangraphs_top_100()
-    enriched = pull_mlb_stats(prospects)
-    
-    filename = f"{DATA_DIR}/top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv"
-    enriched.to_csv(filename, index=False)
-    print(f"✅ Saved {len(enriched)} prospects to {filename}")
+df["pull_date"] = datetime.now().strftime("%Y-%m-%d")
+df.to_csv(f"top_100_prospects_{datetime.now().strftime('%Y%m%d')}.csv", index=False)
+print("✅ Update complete")
